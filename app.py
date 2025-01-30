@@ -1,8 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 from src.models.database import init_db, Session, Content
+from src.processors.document_processor import DocumentProcessor, SUPPORTED_EXTENSIONS
 from src.processors.youtube_processor import YouTubeProcessor
-from src.processors.pdf_processor import PDFProcessor
 import os
 from dotenv import load_dotenv
 import tempfile
@@ -30,7 +30,7 @@ def get_context():
         contents = session.query(Content).all()
         if contents:
             context = "\n\n".join([
-                f"Content from '{c.title}':\n{c.summary}"  
+                f"Content from '{c.title}':\n{c.summary}"
                 for c in contents
             ])
         else:
@@ -91,37 +91,38 @@ with st.sidebar:
                 processor = YouTubeProcessor()
                 content = processor.process_video(youtube_url)
                 if content:
-                    # Clear context cache to include new content
                     st.session_state.context_cache = None
                     st.success("Video processed successfully!")
                 else:
                     st.error("Error processing video. Please check the URL and try again.")
     
-    # PDF upload
-    with st.form("pdf_form"):
-        uploaded_file = st.file_uploader("Upload PDF", type=['pdf'])
-        submit_pdf = st.form_submit_button("Process PDF")
-        if submit_pdf and uploaded_file:
+    # Document upload
+    with st.form("document_form"):
+        st.write("Supported formats: PDF, Python, JavaScript, HTML, CSS, TXT, Markdown, CSV, XML, RTF")
+        uploaded_file = st.file_uploader("Upload Document", type=[ext[1:] for ext in SUPPORTED_EXTENSIONS])
+        submit_doc = st.form_submit_button("Process Document")
+        if submit_doc and uploaded_file:
             # Create a temporary file and ensure it's properly closed
             temp_dir = tempfile.mkdtemp()
-            temp_path = os.path.join(temp_dir, 'uploaded.pdf')
+            original_filename = uploaded_file.name
+            temp_path = os.path.join(temp_dir, original_filename)
             
             try:
                 # Write the uploaded file to the temporary path
                 with open(temp_path, 'wb') as f:
                     f.write(uploaded_file.getvalue())
                 
-                # Process the PDF
-                with st.spinner("Processing PDF..."):
-                    processor = PDFProcessor()
-                    content = processor.process_pdf(temp_path)
+                # Process the document
+                with st.spinner("Processing document..."):
+                    processor = DocumentProcessor()
+                    content = processor.process_document(temp_path)
                     if content:
                         st.session_state.context_cache = None
-                        st.success("PDF processed successfully!")
+                        st.success("Document processed successfully!")
                     else:
-                        st.error("Error processing PDF. Please try again.")
+                        st.error("Error processing document. Please try again.")
             except Exception as e:
-                st.error(f"Error processing PDF: {str(e)}")
+                st.error(f"Error processing document: {str(e)}")
             finally:
                 # Clean up: close file handles and remove temporary directory
                 try:
