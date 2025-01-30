@@ -26,76 +26,72 @@ GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
 genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
 init_db()
 
+# System instructions for different modes and learning styles
+SYSTEM_INSTRUCTIONS = {
+    "general": """You are Claude, a friendly and knowledgeable AI assistant. You aim to be helpful while being direct and concise.
+    You can engage in casual conversation and help with a wide variety of tasks while maintaining a supportive and encouraging tone.""",
+    
+    "study_mentor": {
+        "detailed": """You are a dedicated Study Mentor AI helping students understand their study materials.
+        Provide detailed, comprehensive explanations with examples and analogies.
+        
+        IMPORTANT RULES:
+        1. ONLY answer based on the provided study materials
+        2. Format responses with:
+           - Clear section headings
+           - Detailed explanations
+           - Real-world examples
+           - Analogies for complex concepts
+           - Cross-references between related topics
+        3. ALWAYS cite sources: "According to [Document Name]..."
+        4. If information isn't in materials, say so and offer alternatives
+        
+        Remember: Focus on thorough understanding and connections between concepts.""",
+        
+        "bullet_points": """You are a dedicated Study Mentor AI helping students understand their study materials.
+        Provide concise, bullet-point summaries for quick understanding.
+        
+        IMPORTANT RULES:
+        1. ONLY answer based on the provided study materials
+        2. Format responses as:
+           • Main points in bullet form
+           • Sub-points where needed
+           • Key terms in **bold**
+           • Brief, clear explanations
+        3. ALWAYS cite sources: "From [Document Name]:"
+        4. If information isn't in materials, say so and offer alternatives
+        
+        Remember: Focus on clarity and quick comprehension.""",
+        
+        "eli5": """You are a dedicated Study Mentor AI helping students understand their study materials.
+        Explain concepts like you're talking to a 5-year-old, using simple language and familiar examples.
+        
+        IMPORTANT RULES:
+        1. ONLY answer based on the provided study materials
+        2. Format responses with:
+           - Simple, everyday language
+           - Familiar examples kids can relate to
+           - Fun analogies and comparisons
+           - Short, clear sentences
+           - Visual descriptions where possible
+        3. ALWAYS cite sources: "The story from [Document Name] tells us..."
+        4. If information isn't in materials, say so and offer alternatives
+        
+        Remember: Make complex ideas simple and relatable."""
+    }
+}
+
 # Initialize session state variables
 if 'show_upload' not in st.session_state:
     st.session_state.show_upload = False
-if 'dark_mode' not in st.session_state:
-    st.session_state.dark_mode = False
-if 'notifications' not in st.session_state:
-    st.session_state.notifications = False
+if 'learning_style' not in st.session_state:
+    st.session_state.learning_style = "detailed"
 if 'context_cache' not in st.session_state:
     st.session_state.context_cache = None
 if 'messages' not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hi! How can I help you with your studies today?"}
     ]
-
-# Set up the main container
-st.markdown("""
-    <style>
-    .stApp {
-        max-width: 100%;
-        padding: 1rem;
-    }
-    .main .block-container {
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    section[data-testid="stSidebar"] {
-        width: 250px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# System instructions for different modes
-SYSTEM_INSTRUCTIONS = {
-    "general": """You are Claude, a friendly and knowledgeable AI assistant. 
-    Format your responses using markdown for better readability:
-    - Use **bold** for emphasis
-    - Use `code` for technical terms
-    - Use bullet points and numbered lists appropriately
-    - Keep responses concise and well-structured""",
-    
-    "study_mentor": """You are a dedicated Study Mentor AI helping students understand their study materials.
-    
-    IMPORTANT RULES:
-    1. ONLY answer based on the provided study materials
-    2. Format ALL responses using markdown:
-       - Start with the source: **Source:** [Document Name]
-       - Use **bold** for key terms and concepts
-       - Use bullet points for lists
-       - Use `code` for technical terms/equations
-       - Use > for important quotes from the material
-       
-    3. If information isn't in the materials, respond with:
-       "I don't see this in your current study materials. Would you like to:
-       - Search other sections of your materials
-       - Explore related topics from your materials
-       - Add new study materials about this topic"
-       
-    4. When citing multiple sources:
-       - Clearly indicate which source contains what information
-       - Use headings to separate information from different sources
-       - Cross-reference related information between sources
-       
-    5. Keep responses:
-       - Concise and well-structured
-       - Focused on the materials
-       - Easy to read with proper markdown formatting
-    
-    Remember: You are helping students understand THEIR materials, not providing general knowledge."""
-}
 
 def get_context():
     """Cache and return the context from the database."""
@@ -115,7 +111,7 @@ def get_context():
     return st.session_state.context_cache
 
 def process_user_input(user_input):
-    """Process user input with appropriate system instruction based on context."""
+    """Process user input with appropriate system instruction based on context and learning style."""
     context = get_context()
     
     try:
@@ -142,9 +138,10 @@ def process_user_input(user_input):
                     formatted_context += f"**Key Points:**\n{source['key_points']}\n\n"
                 formatted_context += "---\n\n"
             
-            # Create full system message with instructions and context
+            # Get appropriate system instruction based on learning style
+            style = st.session_state.learning_style
             system_message = (
-                f"{SYSTEM_INSTRUCTIONS['study_mentor']}\n\n"
+                f"{SYSTEM_INSTRUCTIONS['study_mentor'][style]}\n\n"
                 "IMPORTANT: The following are the ONLY materials you should use to answer questions:\n\n"
                 f"{formatted_context}\n"
                 "Remember: ONLY use the information from these materials to answer questions. "
@@ -164,6 +161,22 @@ def process_user_input(user_input):
         logging.error(f"Error in process_user_input: {str(e)}")
         return "I apologize, but I encountered an error. Please try again or rephrase your question."
 
+def delete_source(source_id):
+    """Delete a source from the database."""
+    with Session() as session:
+        content = session.query(Content).filter(Content.id == source_id).first()
+        if content:
+            session.delete(content)
+            session.commit()
+            st.session_state.context_cache = None
+
+def clear_all_sources():
+    """Clear all sources from the database."""
+    with Session() as session:
+        session.query(Content).delete()
+        session.commit()
+        st.session_state.context_cache = None
+
 # Left sidebar with tabs for Sources and Settings
 with st.sidebar:
     sources_tab, settings_tab = st.tabs(["📚 Sources", "⚙️ Settings"])
@@ -172,22 +185,32 @@ with st.sidebar:
     with sources_tab:
         st.title("Sources")
         
-        # Add source and Clear buttons in same row
-        col1, col2 = st.columns([3, 2])
+        col1, col2 = st.columns([4, 1])
         with col1:
-            if st.button("📄 Add Source", key="add_source"):
-                st.session_state.show_upload = not st.session_state.show_upload
+            if st.button("Add Source"):
+                st.session_state.show_upload = True
+                st.rerun()
         with col2:
-            if st.button("🗑️ Clear All", key="clear_sources", type="secondary"):
-                session = Session()
-                session.query(Content).delete()
-                session.commit()
-                st.session_state.context_cache = None
-                st.success("All sources cleared!")
+            if st.button("Clear All"):
+                st.session_state.show_clear_confirm = True
                 st.rerun()
         
+        # Show clear all confirmation
+        if st.session_state.get('show_clear_confirm', False):
+            st.warning("Are you sure you want to delete all sources?")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes", key="clear_yes"):
+                    clear_all_sources()
+                    st.session_state.show_clear_confirm = False
+                    st.rerun()
+            with col2:
+                if st.button("No", key="clear_no"):
+                    st.session_state.show_clear_confirm = False
+                    st.rerun()
+        
         # Show upload section when Add Source is clicked
-        if st.session_state.show_upload:
+        if st.session_state.get('show_upload', False):
             st.write("### Upload Study Materials")
             upload_tab = st.radio("Select Source Type:", ["Document", "YouTube"], horizontal=True)
             
@@ -240,39 +263,64 @@ with st.sidebar:
                         st.error(f"Error processing video: {str(e)}")
 
             # Hide upload section button
-            if st.button("❌ Cancel", key="hide_upload"):
+            if st.button("❌ Cancel"):
                 st.session_state.show_upload = False
                 st.rerun()
         
-        # Show divider before existing sources
-        st.write("---")
-        
-        # Show existing sources
-        session = Session()
-        contents = session.query(Content).all()
-        
-        if contents:
-            st.write("### Existing Sources")
-            for content in contents:
-                with st.expander(f"📚 {content.title}"):
-                    st.write(f"**Summary:** {content.summary}")
-                    if content.key_points:
-                        st.write(f"**Key Points:** {content.key_points}")
-
+        # Get all sources
+        with Session() as session:
+            sources = session.query(Content).all()
+            
+            if not sources:
+                st.info("No sources added yet. Click 'Add Source' to get started!")
+            else:
+                for source in sources:
+                    cols = st.columns([12, 1.5])
+                    with cols[0]:
+                        with st.expander(f"📄 {source.title}", expanded=False):
+                            if source.summary:
+                                st.write("**Summary:** " + source.summary)
+                            if source.key_points:
+                                st.write("**Key Points:** " + source.key_points)
+                    with cols[1]:
+                        if st.button("❌", key=f"delete_{source.id}", help="Delete this source", use_container_width=True):
+                            st.session_state[f'confirm_delete_{source.id}'] = True
+                            st.rerun()
+                    
+                    # Show delete confirmation below the source
+                    if st.session_state.get(f'confirm_delete_{source.id}', False):
+                        st.warning(f"Are you sure you want to delete '{source.title}'?")
+                        conf_col1, conf_col2 = st.columns(2)
+                        with conf_col1:
+                            if st.button("Yes", key=f"yes_{source.id}"):
+                                delete_source(source.id)
+                                st.session_state.pop(f'confirm_delete_{source.id}')
+                                st.rerun()
+                        with conf_col2:
+                            if st.button("No", key=f"no_{source.id}"):
+                                st.session_state.pop(f'confirm_delete_{source.id}')
+                                st.rerun()
+                    
     # Settings Tab
     with settings_tab:
         st.title("Settings")
         
-        st.subheader("Appearance")
-        dark_mode = st.checkbox("Dark Mode", value=st.session_state.dark_mode)
-        if dark_mode != st.session_state.dark_mode:
-            st.session_state.dark_mode = dark_mode
-            st.rerun()
+        # Learning Style
+        st.write("### Learning Style")
+        learning_style = st.selectbox(
+            "Choose how you want information presented:",
+            options=["detailed", "bullet_points", "eli5"],
+            format_func=lambda x: {
+                "detailed": "Detailed Explanations",
+                "bullet_points": "Bullet Point Summaries",
+                "eli5": "Explain Like I'm 5"
+            }[x],
+            key="learning_style_select"
+        )
         
-        st.subheader("Notifications")
-        notifications = st.checkbox("Enable Notifications", value=st.session_state.notifications)
-        if notifications != st.session_state.notifications:
-            st.session_state.notifications = notifications
+        if learning_style != st.session_state.learning_style:
+            st.session_state.learning_style = learning_style
+            st.success(f"Learning style updated to: {learning_style}")
             st.rerun()
 
 # Display chat messages
