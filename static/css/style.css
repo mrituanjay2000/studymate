@@ -1,0 +1,180 @@
+/* Global styles */
+:root {
+    --primary-color: #f0f2f6;
+    --secondary-color: #ffffff;
+    --text-color: #0f1116;
+    --border-color: #e0e3e9;
+    --hover-color: #f7f9fc;
+    --accent-color: #4285f4;
+    --sidebar-width: 500px;
+}
+
+/* Hide Streamlit elements */
+#MainMenu, footer {
+    visibility: hidden;
+}
+
+.stDeployButton {
+    display: none !important;
+}
+
+/* Main container */
+.main > div:first-child {
+    padding: 0 !important;
+}
+
+.block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+
+/* Left Sidebar */
+[data-testid="stSidebar"] {
+    border-right: 1px solid var(--border-color);
+    width: var(--sidebar-width) !important;
+    flex: 0 0 var(--sidebar-width) !important;
+    background-color: var(--primary-color);
+    transition: margin-left 0.3s, width 0.3s;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding: 0 !important;
+    width: var(--sidebar-width) !important;
+    transition: margin-left 0.3s, width 0.3s;
+}
+
+/* Fix for collapsed sidebar */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    margin-left: -500px !important;
+    width: 0 !important;
+    display: none !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
+    margin-left: -500px !important;
+    width: 0 !important;
+    display: none !important;
+}
+
+/* Sidebar sections */
+[data-testid="stSidebar"] .block-container {
+    padding-top: 2rem !important;
+}
+
+/* Sidebar title */
+[data-testid="stSidebar"] h1 {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    margin: 0 1.5rem 1.5rem !important;
+    color: var(--text-color) !important;
+    white-space: nowrap !important;
+}
+
+/* Source buttons */
+.stButton > button {
+    width: 100% !important;
+    font-size: 0.875rem !important;
+    padding: 0.5rem 1rem !important;
+    height: 36px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    background: var(--secondary-color) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+
+.stButton > button:hover {
+    background: var(--hover-color) !important;
+    border-color: var(--accent-color) !important;
+}
+
+/* Settings sections */
+[data-testid="stSidebar"] h2 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    margin: 2rem 0 1rem !important;
+    color: var(--text-color) !important;
+    opacity: 0.8;
+}
+
+/* Checkbox settings */
+.stCheckbox {
+    padding: 0.75rem 0 !important;
+}
+
+.stCheckbox label p {
+    font-size: 0.875rem !important;
+    color: var(--text-color) !important;
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+    font-size: 0.875rem !important;
+    background: var(--secondary-color) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 0.75rem 1rem !important;
+    margin: 0 1.5rem 0.5rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.streamlit-expanderContent {
+    font-size: 0.875rem !important;
+    background: var(--secondary-color) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 1rem !important;
+    margin: 0.5rem 1.5rem !important;
+}
+
+/* Tabs */
+.stTabs {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: -1rem -1.5rem 1.5rem -1.5rem !important;
+}
+
+[data-testid="stTabsContent"] {
+    padding: 1.5rem !important;
+}
+
+.stTabs [role="tablist"] {
+    padding: 0 1.5rem !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.stTabs button[role="tab"] {
+    font-size: 0.875rem !important;
+    padding: 0.75rem 1.25rem !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    color: var(--text-color) !important;
+    opacity: 0.7;
+    transition: all 0.2s ease !important;
+}
+
+.stTabs button[role="tab"]:hover {
+    opacity: 1;
+    background: var(--hover-color) !important;
+}
+
+.stTabs button[role="tab"][aria-selected="true"] {
+    background: transparent !important;
+    border-bottom-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+    opacity: 1;
+}
+
+/* Success/Error messages */
+.stSuccess, .stError {
+    padding: 0.75rem 1rem !important;
+    border-radius: 6px !important;
+    margin: 1rem 0 !important;
+}
