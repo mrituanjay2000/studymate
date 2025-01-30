@@ -97,28 +97,25 @@ class YouTubeProcessor:
             raise
 
     def process_video(self, url):
-        logger.info(f"Starting video processing pipeline for URL: {url}")
-        start_time = time.time()
-        
+        """Process a YouTube video and store its content."""
+        temp_dir = tempfile.mkdtemp()
         try:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                try:
-                    # Download and process video
-                    video_path, title = self._download_video(url, temp_dir)
-                    logger.info("Video download completed")
-                    
-                    video_base64 = self._process_video_data(video_path)
-                    logger.info("Video data encoding completed")
-
-                    # Create video part for the model
-                    video_part = {
-                        'mime_type': 'video/mp4',
-                        'data': video_base64
-                    }
-                    logger.info("Video part prepared for model")
-
-                    # Create the prompt for video analysis
-                    prompt = f"""Analyze this educational video and provide:
+            # Download video and get title
+            video_path, title = self._download_video(url, temp_dir)
+            
+            # Process video content
+            content = Content(
+                title=title,
+                source_type="youtube"  # Set source type here
+            )
+            
+            # Generate summary and key points
+            video_base64 = self._process_video_data(video_path)
+            video_part = {
+                'mime_type': 'video/mp4',
+                'data': video_base64
+            }
+            prompt = f"""Analyze this educational video and provide:
 
 1. Brief Summary:
    - Core topic and main message
@@ -132,35 +129,29 @@ class YouTubeProcessor:
    - 2 multiple choice questions with answers
 
 Video Title: {title}"""
-
-                    # Generate content
-                    response_text = self._generate_content(prompt, video_part)
-                    logger.info("Content generation completed")
-                    
-                    # Store in database
-                    session = Session()
-                    content = Content(
-                        type='youtube',
-                        source_url=url,
-                        title=title,
-                        content=prompt,
-                        summary=response_text,
-                        key_points=None
-                    )
-                    session.add(content)
-                    session.commit()
-                    logger.info("Content saved to database")
-                    
-                    total_time = time.time() - start_time
-                    logger.info(f"Total processing time: {total_time:.2f} seconds")
-                    return content
-                    
-                except Exception as e:
-                    logger.error(f"Error during video processing: {str(e)}")
-                    st.error(f"Error during video processing: {str(e)}")
-                    return None
+            summary = self._generate_content(prompt, video_part)
+            content.summary = summary
+            content.content = f"YouTube Video: {url}\n\nSummary:\n{summary}"
+            
+            # Store in database
+            session = Session()
+            session.add(content)
+            session.commit()
+            logger.info("Content saved to database")
+            
+            return content
             
         except Exception as e:
-            logger.error(f"Error processing YouTube video: {str(e)}")
-            st.error(f"Error processing YouTube video: {str(e)}")
-            return None
+            logger.error(f"Error processing video: {str(e)}")
+            raise
+        finally:
+            # Clean up temp files
+            if os.path.exists(temp_dir):
+                for file in os.listdir(temp_dir):
+                    file_path = os.path.join(temp_dir, file)
+                    try:
+                        if os.path.isfile(file_path):
+                            os.unlink(file_path)
+                    except Exception as e:
+                        logger.error(f"Error deleting {file_path}: {str(e)}")
+                os.rmdir(temp_dir)

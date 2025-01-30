@@ -24,6 +24,7 @@ class Content(Base):
     content = Column(Text)
     summary = Column(Text)
     key_points = Column(Text)
+    source_type = Column(String)  # Added for source type tracking
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class UserQuery(Base):

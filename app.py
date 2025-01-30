@@ -177,6 +177,37 @@ def clear_all_sources():
         session.commit()
         st.session_state.context_cache = None
 
+def get_source_icon(title, source_type=None):
+    """Get the appropriate icon based on source title/type."""
+    # Check source type first
+    if source_type == "youtube":
+        return "🎬"  # Video icon
+    
+    # Then check file extensions
+    lower_title = title.lower()
+    if lower_title.endswith('.pdf'):
+        return "📑"  # PDF icon
+    elif lower_title.endswith('.html'):
+        return "🌐"  # HTML icon
+    elif lower_title.endswith('.py'):
+        return "🐍"  # Python icon
+    elif lower_title.endswith('.js'):
+        return "📱"  # JavaScript icon
+    elif lower_title.endswith('.css'):
+        return "🎨"  # CSS icon
+    elif lower_title.endswith('.txt'):
+        return "📝"  # Text file icon
+    elif lower_title.endswith('.md'):
+        return "📋"  # Markdown icon
+    elif lower_title.endswith('.csv'):
+        return "📊"  # CSV/Spreadsheet icon
+    elif lower_title.endswith('.xml'):
+        return "🔧"  # XML icon
+    elif lower_title.endswith('.json'):
+        return "📦"  # JSON icon
+    else:
+        return "📄"  # Default document icon
+
 # Left sidebar with tabs for Sources and Settings
 with st.sidebar:
     sources_tab, settings_tab = st.tabs(["📚 Sources", "⚙️ Settings"])
@@ -250,18 +281,25 @@ with st.sidebar:
                     try:
                         with st.spinner("Processing video..."):
                             processor = YouTubeProcessor()
-                            content = processor.process_video(youtube_url)
-                            
-                            if content:
-                                st.success("Successfully processed video")
-                                st.session_state.context_cache = None
-                                st.session_state.show_upload = False
-                                st.rerun()
-                            else:
-                                st.error("Failed to process video")
+                            # Create new session for processing
+                            with Session() as session:
+                                content = processor.process_video(youtube_url)
+                                if content:
+                                    # Update source type within the same session
+                                    content.source_type = "youtube"
+                                    session.add(content)
+                                    session.commit()
+                                    session.refresh(content)
+                                    
+                                    st.success("Successfully processed video")
+                                    st.session_state.context_cache = None
+                                    st.session_state.show_upload = False
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to process video")
                     except Exception as e:
                         st.error(f"Error processing video: {str(e)}")
-
+            
             # Hide upload section button
             if st.button("❌ Cancel"):
                 st.session_state.show_upload = False
@@ -277,7 +315,8 @@ with st.sidebar:
                 for source in sources:
                     cols = st.columns([12, 1.5])
                     with cols[0]:
-                        with st.expander(f"📄 {source.title}", expanded=False):
+                        source_icon = get_source_icon(source.title, getattr(source, 'source_type', None))
+                        with st.expander(f"{source_icon} {source.title}", expanded=False):
                             if source.summary:
                                 st.write("**Summary:** " + source.summary)
                             if source.key_points:
