@@ -3,6 +3,7 @@ import google.generativeai as genai
 from src.models.database import init_db, Session, Content
 from src.processors.document_processor import DocumentProcessor, SUPPORTED_EXTENSIONS
 from src.processors.youtube_processor import YouTubeProcessor
+from src.processors.link_processor import LinkProcessor
 import os
 import tempfile
 import logging
@@ -45,7 +46,7 @@ SYSTEM_INSTRUCTIONS = {
            - Cross-references between related topics
         3. If information isn't in materials, say so and offer alternatives
         
-        At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
+        VERY IMPORTANT: At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
         Remember: Focus on thorough understanding and connections between concepts.""",
         
         "bullet_points": """You are a dedicated Study Mentor AI helping students understand their study materials.
@@ -59,7 +60,8 @@ SYSTEM_INSTRUCTIONS = {
            • Key terms in **bold**
            • Brief, clear explanations
         3. If information isn't in materials, say so and offer alternatives
-        At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
+
+        VERY IMPORTANT: At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
         Remember: Focus on clarity and quick comprehension.""",
         
         "eli5": """You are a dedicated Study Mentor AI helping students understand their study materials.
@@ -74,7 +76,8 @@ SYSTEM_INSTRUCTIONS = {
            - Short, clear sentences
            - Visual descriptions where possible
         3. If information isn't in materials, say so and offer alternatives
-        At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
+
+        VERY IMPORTANT: At the end in bold in a new line, **SOURCE** if one document [Document Name] else if multiple documents [Document Name 1, Document Name 2...]
         Remember: Make complex ideas simple and relatable."""
     }
 }
@@ -241,7 +244,7 @@ with st.sidebar:
         # Show upload section when Add Source is clicked
         if st.session_state.get('show_upload', False):
             st.write("### Upload Study Materials")
-            upload_tab = st.radio("Select Source Type:", ["Document", "YouTube"], horizontal=True)
+            upload_tab = st.radio("Select Source Type:", ["Document", "YouTube", "Website Link"], horizontal=True)
             
             if upload_tab == "Document":
                 st.write("Supported formats: PDF, Python, JavaScript, HTML, CSS, TXT, Markdown, CSV, XML, RTF")
@@ -273,7 +276,7 @@ with st.sidebar:
                         if os.path.exists(temp_dir):
                             os.rmdir(temp_dir)
             
-            else:  # YouTube tab
+            elif upload_tab == "YouTube":  # YouTube tab
                 youtube_url = st.text_input("Enter YouTube URL")
                 if youtube_url:
                     try:
@@ -297,6 +300,53 @@ with st.sidebar:
                                     st.error("Failed to process video")
                     except Exception as e:
                         st.error(f"Error processing video: {str(e)}")
+            
+            else:  # Website Link tab
+                st.write("Enter a website URL to process its content")
+                st.write("Note: Processing may take a few moments depending on the website size")
+                website_url = st.text_input("Enter Website URL (include http:// or https://)")
+                
+                if website_url:
+                    try:
+                        progress_placeholder = st.empty()
+                        with st.spinner("Processing website content..."):
+                            progress_placeholder.info("Fetching website content...")
+                            processor = LinkProcessor()
+                            
+                            # Process the link first
+                            progress_placeholder.info("Analyzing content...")
+                            content, title, url = processor.process_link(website_url)
+                            
+                            if content and title and url:
+                                # Create new session for database operations
+                                with Session() as session:
+                                    progress_placeholder.info("Saving processed content...")
+                                    
+                                    # Update content properties
+                                    content.title = title
+                                    content.source_type = "website"
+                                    content.url = url
+                                    
+                                    # Add and commit within the same session
+                                    session.add(content)
+                                    session.commit()
+                                    
+                                    progress_placeholder.success("Successfully processed website content")
+                                    st.session_state.context_cache = None
+                                    st.session_state.show_upload = False
+                                    st.rerun()
+                            else:
+                                progress_placeholder.error("Failed to process website content. The content might be too complex or not accessible.")
+                    except ValueError as e:
+                        st.error(str(e))
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "took too long to respond" in error_msg:
+                            st.error("⏱️ " + error_msg)
+                        elif "Error accessing website" in error_msg:
+                            st.error("🌐 " + error_msg + "\nPlease check if the URL is correct and the website is accessible.")
+                        else:
+                            st.error("❌ " + error_msg)
             
             # Hide upload section button
             if st.button("❌ Cancel"):
