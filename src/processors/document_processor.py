@@ -117,31 +117,25 @@ Additional Analysis Points:
             # Create the analysis prompt
             prompt = f"""You are a helpful study assistant analyzing a document. Please analyze this document and provide:
 
-1. Document Overview:
-   - Document type and purpose
-   - Main topic or subject matter
-   - Target audience
-   - Structure and organization
-
-2. Content Analysis:
+1. Content Analysis:
    - Executive summary (2-3 sentences)
    - Main concepts or ideas presented
    - Key points and arguments
    - Important definitions or terminology
 
-3. Detailed Breakdown:
+2. Detailed Breakdown:
    - Section-by-section analysis
    - Important examples or illustrations
    - References or citations
    - Visual elements description (if any)
 
-4. Study Guide:
+3. Study Guide:
    - Essential concepts to understand
    - Common misconceptions to avoid
    - Practical applications
    - Related topics to explore
 
-5. Learning Assessment:
+4. Learning Assessment:
    - 3 multiple choice questions with explanations
    - Key points for review
    - Practice exercises or problems

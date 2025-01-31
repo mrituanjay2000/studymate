@@ -115,20 +115,49 @@ class YouTubeProcessor:
                 'mime_type': 'video/mp4',
                 'data': video_base64
             }
-            prompt = f"""Analyze this educational video and provide:
+            prompt = f"""Analyze this educational video and provide a comprehensive educational breakdown:
 
-1. Brief Summary:
-   - Core topic and main message
-   - Key takeaways
+1. Detailed Content Breakdown:
+   - Core concepts explained (with timestamps if available)
+   - Definitions of key terms and technical vocabulary
+   - Step-by-step explanations of processes or methods
+   - Real-world examples and applications discussed
+   - Visual aids, diagrams, or demonstrations used
 
-2. Main Points:
-   - Key concepts covered
-   - Important examples shown
+2. Conceptual Framework:
+   - Underlying theories or principles
+   - Relationships between different concepts
+   - Common misconceptions addressed
+   - Historical context or background information
 
-3. Learning Assessment:
-   - 2 multiple choice questions with answers
+3. Practical Applications:
+   - Case studies or examples shown
+   - Problem-solving techniques demonstrated
+   - Practical tips or best practices shared
+   - Industry or real-world relevance
 
-Video Title: {title}"""
+4. Learning Resources:
+   - Related topics mentioned
+   - Recommended further reading/viewing
+   - Tools or software discussed
+   - External references cited
+
+5. Study Guide:
+   - Key points to remember
+   - Important formulas or equations
+   - Critical thinking questions
+   - Practice exercises or challenges mentioned
+
+6. Assessment Materials:
+   - 3 multiple-choice questions (varying difficulty)
+   - 2 open-ended discussion questions
+   - 1 practical application scenario
+   - Answer key with explanations
+
+Note: Focus on extracting educational value. Include specific examples, explanations, and timestamps where relevant. Make complex concepts accessible while preserving technical accuracy.
+Video Title: {title}
+
+"""
             summary = self._generate_content(prompt, video_part)
             content.summary = summary
             content.content = f"YouTube Video: {url}\n\nSummary:\n{summary}"
